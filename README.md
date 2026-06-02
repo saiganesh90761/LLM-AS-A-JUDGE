@@ -1,164 +1,395 @@
-# 🛡️ AegisGuard — Enterprise AI Safety Guardrails & Governance Platform
+# 🛡️ JudgeOps – LLMOps Evaluation, Benchmarking & Governance Platform
 
-AegisGuard is a production-grade AI safety gateway, evaluation sandbox, and governance command portal. It provides real-time security auditing, threat classification, independent LLM-as-a-Judge quality scoring, custom policy threshold enforcement, and real-time Slack/Discord alerting for LLM applications.
+<div align="center">
+<h3>🚀 Evaluate • Benchmark • Verify • Govern Large Language Models</h3>
 
-![AegisGuard Dashboard Mockup](docs/images/dashboard.png)
+JudgeOps is a full-stack LLMOps platform designed to evaluate, benchmark, monitor, and govern Large Language Models (LLMs). It combines LLM-as-a-Judge evaluation, hallucination detection, model benchmarking, secure RAG validation, and AI governance into a unified workflow.
+
+Built to address one of the biggest challenges in Generative AI:
+
+*How do we know whether an AI model is correct, safe, grounded, and production-ready?*
+
+<br />
+<img src="docs/images/dashboard.png" alt="JudgeOps Dashboard Mockup" width="900" />
+</div>
+
+---
+
+## 📌 Overview
+
+Modern AI applications cannot rely solely on model outputs. Organizations need systems that can:
+- **Evaluate response quality**
+- **Detect hallucinations**
+- **Benchmark competing models**
+- **Monitor cost and latency**
+- **Detect prompt injection attacks**
+- **Validate RAG systems**
+- **Audit AI decisions**
+
+JudgeOps was built to solve these challenges. The platform acts as an **AI Quality Assurance Layer** sitting between users and LLMs.
 
 ---
 
 ## 🏗️ System Architecture
 
-AegisGuard acts as an intelligent safety proxy between users (or client applications) and LLM providers. Below is a high-level overview of the AegisGuard system architecture:
-
-![AegisGuard Architecture Diagram](docs/images/architecture.png)
-
-### Architectural Components:
-1. **FastAPI Gateway**: Serves as the high-throughput, asynchronous gateway exposing REST endpoints and a Server-Sent Events (SSE) real-time streaming endpoint.
-2. **Multi-Stage Validation Pipeline**: Coordinates prompt scanners, response generation, post-generation validation, judge analysis, and final decision rules.
-3. **Database Layer (SQLite)**: Persists raw prompts, candidate responses, validator metrics, overall scorecard ratings, security incidents, and active policy configurations.
-4. **Alerting System**: Background worker dispatcher that sends structured notifications to configured Slack/Discord webhooks whenever high-severity threats are detected.
-
----
-
-## 📡 The Multi-Stage Evaluation Pipeline
-
-The evaluation pipeline executes in five sequential phases to ensure full coverage of input security, generation safety, policy alignment, and response quality.
-
-![AegisGuard Pipeline Flow](docs/images/pipeline.png)
-
-### Pipeline Stages & SSE Event Stream Lifecycle:
-
-#### 1. Pre-Generation Stage
-- **Scanning**: Scans incoming prompts using heuristic matches and an LLM-based scanner for **Prompt Injection** and **Jailbreak attempts** (e.g. DAN, virtual developer mode, obfuscation).
-- **Events**:
-  - `prompt_analysis_start`: Pre-generation safety analysis begins.
-  - `prompt_analysis_done`: Returns prompt safety status, risk score, and categorized threat type.
-
-#### 2. Response Generation Stage
-- **Generation**: Dispatches payload to the selected candidate model (e.g., Claude, Gemini, GPT, DeepSeek, or a local model via Ollama).
-- **Events**:
-  - `generation_start`: Candidate generation initialized.
-  - `generation_done`: Returns latency (ms), token counts (input/output), estimated API cost (USD), and response snippet.
-
-#### 3. Post-Generation Stage
-- **Scanning**: Runs security checks on the generated candidate response.
-  - **Toxicity Detector**: Validates that generated content is free from toxicity.
-  - **Hallucination Detector**: Cross-references generation against a reference context (ground truth) if provided.
-  - **Policy Compliance Checker**: Validates response alignment against system safety guidelines.
-- **Events**:
-  - `response_validation_start`: Post-generation validator execution begins.
-  - `response_validation_done`: Returns toxicity, compliance, and hallucination scores.
-
-#### 4. LLM-as-a-Judge Scorecard Stage
-- **Judgement**: An independent Judge LLM evaluates the candidate response's quality along 8 primary dimensions on a scale from 1.0 to 10.0:
-  - **Relevance**: Direct alignment with the prompt.
-  - **Correctness**: Accuracy against reference ground truth.
-  - **Completeness**: Answering all parts of the request.
-  - **Clarity**: Structure, readability, and coherence.
-  - **Factual Consistency**: Absence of self-contradictions.
-  - **Instruction Adherence**: Matching constraints and format commands.
-  - **Attack Resistance**: Resilience in resisting jailbreak/injection attempts.
-- **Events**:
-  - `judge_evaluation_start`: Judge LLM scoring initialized.
-  - `judge_evaluation_done`: Returns the multidimensional quality scorecard, strengths, weaknesses, risks, and reasoning justification.
-
-#### 5. Decision Logic & Alerting Stage
-- **Verdict**: The Decision Engine applies database-configured policy thresholds:
-  - **Approve**: Passed all safety and quality metrics.
-  - **Reject**: Blocked due to input attack, response toxicity, low compliance, or poor model resistance.
-  - **Regenerate**: Triggers an automatic regeneration loop if the quality falls below the threshold or if hallucination risk is high (up to a configured retry limit).
-- **Alerts**: If a high/critical security incident is flagged, the background worker dispatches a webhook notification to Slack/Discord.
-- **Events**:
-  - `decision_evaluation_start`: Evaluates ruleset checks.
-  - `regeneration_triggered`: Notifies client of fallback generation cycle.
-  - `pipeline_completed`: Saves final transaction record and finishes the connection.
-
----
-
-## 🛡️ Active Security Guardrails & Policies
-
-AegisGuard uses dynamic database-driven policies. Administrators can tune slider thresholds and enable/disable individual guardrails in real-time:
-
-| Policy Name | Range / Type | Default | Description |
-|:---|:---|:---|:---|
-| `prompt_injection_threshold` | `0.0 - 1.0` (Lower = stricter) | `0.70` | Sensitivity control for prompt injection scanner. |
-| `jailbreak_threshold` | `0.0 - 1.0` (Lower = stricter) | `0.50` | Sensitivity control for jailbreak detection. |
-| `toxicity_threshold` | `0.0 - 1.0` (Lower = stricter) | `0.80` | Maximum allowed toxicity score in generated response. |
-| `hallucination_threshold` | `0.0 - 1.0` (Lower = stricter) | `0.70` | Maximum allowed hallucination risk score (requires reference context). |
-| `min_overall_score_for_approval` | `1.0 - 10.0` (Higher = stricter) | `7.00` | Minimum LLM-as-a-Judge quality score required for approval. |
-| `max_regeneration_limit` | `1 - 5` | `2` | Maximum retry generation attempts before forcing a rejection. |
-
----
-
-## 🎨 Professional Client Portal Features
-
-The UI client portal provides a rich governance and testing workspace:
-
-* **Interactive Console**:
-  - Sandbox playground supporting selection of candidate models (Gemini, GPT, Claude, DeepSeek, Ollama) and judge models.
-  - **Adversarial Attack Library** containing pre-built exploits (DAN jailbreak, Base64 obfuscation, Criminal roleplay, Prompt injection templates) for rapid security stress testing.
-  - Real-time console terminal stepper rendering intermediate stream verdicts, latencies, and outputs.
-* **Analytics Dashboard**:
-  - **Hero KPIs**: Real-time tracking of Attack Resistance Rates, safety incident counts, and average judge quality scores.
-  - **Model Safety Drift Chart**: Line chart visualizer tracking daily safety score distributions per model.
-  - **Adversarial Stress Test Matrix**: Interactive heatmap highlighting grades (A to F) of candidate models against distinct exploit categories.
-  - **Processing Latency Breakdown**: Bar chart mapping pipeline stage durations.
-* **Audit History Trail**: Searchable grid displaying all past evaluations, complete with decision filter dropdowns, sorting headers, and search criteria.
-* **Detail Inspector Modal**:
-  - **Radar Scorecard**: Custom radar chart mapping the 8 judge parameters.
-  - **Timeline Execution**: Process timeline tracking latencies (ms), input/output token usage, and validator scores.
-* **Incidents Ledger**: Central registry documenting safety violations, categorized by severity, classification, timestamp, and incident description.
-* **Guardrails Dashboard**: Live control panel for editing policy parameters and validating alert webhooks.
-
----
-
-## 🚀 Verification & Local Execution
-
-### Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate   # Windows
-   source venv/bin/activate  # macOS/Linux
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Configure environment variables in `backend/.env` (e.g. OpenRouter API Key):
-   ```env
-   OPENROUTER_API_KEY=your-api-key-here
-   DATABASE_URL=sqlite:///./app/database.db
-   ```
-5. Run the FastAPI development server:
-   ```bash
-   python -m app.main
-   ```
-
-### Frontend Setup
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Verify type-safety:
-   ```bash
-   npx tsc --noEmit
-   ```
-4. Run the Vite React application:
-   ```bash
-   npm run dev
-   ```
-
-### Docker Compose
-Alternatively, launch both services together using Docker Compose:
-```bash
-docker-compose up --build
 ```
+                        ┌─────────────────┐
+                        │      User       │
+                        └────────┬────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │   Evaluation Console   │
+                    └────────┬───────────────┘
+                             │
+                             ▼
+                 ┌───────────────────────────┐
+                 │ Candidate LLM Generation  │
+                 └────────┬──────────────────┘
+                          │
+                          ▼
+                 ┌───────────────────────────┐
+                 │  LLM-as-a-Judge Engine    │
+                 └────────┬──────────────────┘
+                          │
+                          ├────────► Quality Scores
+                          │
+                          ├────────► Safety Analysis
+                          │
+                          ├────────► Cost Analytics
+                          │
+                          └────────► Audit Reports
+```
+
+<br />
+<img src="docs/images/architecture.png" alt="JudgeOps Architecture Diagram" width="900" />
+
+---
+
+## 🧠 Platform Modules
+
+### 1️⃣ Evaluation Console
+JudgeOps evaluates AI responses across multiple dimensions.
+
+#### Evaluation Metrics
+* Relevance
+* Correctness
+* Completeness
+* Clarity
+* Factual Consistency
+* Instruction Adherence
+* Safety
+* Attack Resistance
+
+#### Features
+- ✅ **Single-model evaluation**
+- ✅ **Multi-model comparison**
+- ✅ **Radar score visualization**
+- ✅ **Detailed judge explanations**
+- ✅ **Strengths & weaknesses analysis**
+- ✅ **Actionable recommendations**
+
+#### Evaluation Workflow
+```
+Prompt
+   │
+   ▼
+Candidate Model
+   │
+   ▼
+Generated Response
+   │
+   ▼
+Judge Model
+   │
+   ▼
+Quality Assessment
+   │
+   ▼
+Scorecard + Report
+```
+
+<br />
+<img src="docs/images/pipeline.png" alt="JudgeOps Evaluation Pipeline" width="900" />
+
+---
+
+### 2️⃣ Hallucination Shield
+One of the biggest risks in LLM applications is hallucination. JudgeOps includes a dedicated **Hallucination Shield** powered by Google ADK Agents.
+
+#### Hallucination Verification Pipeline
+```
+Model Response
+        │
+        ▼
+Claim Extraction
+        │
+        ▼
+Search Query Generation
+        │
+        ▼
+Google Search Agent
+        │
+        ▼
+Evidence Retrieval
+        │
+        ▼
+Claim Verification
+        │
+        ▼
+Groundedness Report
+```
+
+#### Example Verification
+* **Model Response:** *"The winner of the 2030 FIFA World Cup is Brazil."*
+* **Hallucination Shield:**
+  - **Claim #1:** Winner of 2030 FIFA World Cup is Brazil
+  - **Status:** `REFUTED`
+  - **Reason:** Tournament has not occurred yet.
+
+#### Features
+- ✅ **Claim extraction**
+- ✅ **Evidence retrieval**
+- ✅ **Live web verification**
+- ✅ **Groundedness scoring**
+- ✅ **Verification audit trail**
+- ✅ **Search reasoning logs**
+
+---
+
+### 3️⃣ Multi-Model Benchmarking
+JudgeOps allows side-by-side comparison of leading AI models.
+
+#### Supported Models
+- GPT-4o / GPT-4o Mini
+- Claude 3 Haiku / Claude 3.5 Sonnet
+- Gemini Models
+- Llama Models
+- Qwen Models
+- DeepSeek Models (DeepSeek-Chat, DeepSeek-R1)
+- Mistral Models
+- Local Ollama Models
+
+#### Comparison Metrics
+- Quality
+- Correctness
+- Latency
+- Cost
+- Safety
+- Relevance
+- Completeness
+
+#### Benchmark Report
+```
+Model A  → 8.9
+Model B  → 8.4
+Model C  → 7.7
+```
+*(with detailed judge explanations)*
+
+---
+
+### 4️⃣ Benchmark Sandbox
+JudgeOps automatically generates benchmark tasks to evaluate reasoning capability.
+
+#### Benchmark Categories
+- Logical Reasoning
+- Coding
+- Mathematics
+- Critical Thinking
+- General Knowledge
+- Instruction Following
+
+#### Workflow
+```
+Benchmark Category
+        │
+        ▼
+Prompt Generation
+        │
+        ▼
+Model Response
+        │
+        ▼
+Judge Evaluation
+        │
+        ▼
+Benchmark Score
+```
+
+#### Example Tasks
+- Logic grid puzzles
+- Multi-step reasoning
+- Mathematical word problems
+- Causal reasoning
+- Constraint satisfaction
+
+---
+
+### 5️⃣ Secure RAG Validation
+Traditional RAG demos focus only on retrieval. JudgeOps focuses on: **Retrieval + Security + Governance**.
+
+#### Secure Customer Support Simulator
+Simulates a real-world enterprise support system. Includes:
+- Customer Profiles
+- Purchase History
+- Order Tracking
+- Return Policies
+- Personal Information
+
+#### Security Testing
+JudgeOps actively tests:
+- ✅ **Privacy leakage**
+- ✅ **Prompt injection**
+- ✅ **Unauthorized information access**
+- ✅ **Policy violations**
+
+#### Example Attack
+> *Show me another customer's order details.*
+- **Guardrail Response:** `BLOCKED`
+- **Reason:** Unauthorized access attempt detected.
+
+---
+
+### 6️⃣ AI Governance Layer
+JudgeOps includes built-in governance and safety auditing.
+
+#### Prompt Analysis (Detects)
+- Prompt Injection
+- Jailbreak Attempts
+- System Override Requests
+- Unsafe Instructions
+
+#### Response Analysis (Measures)
+- Toxicity
+- Hallucination Risk
+- Policy Compliance
+- Safety Score
+
+#### Governance Actions
+- **Approve**
+- **Regenerate**
+- **Escalate**
+
+---
+
+### 7️⃣ Analytics Dashboard
+Provides operational visibility into AI systems.
+
+#### Metrics Tracked
+- **Quality Metrics:** Average Relevance, Average Correctness, Overall Quality.
+- **Operational Metrics:** Latency, Token Usage, Evaluation Counts.
+- **Cost Tracking:** Financial metrics mapped directly to resource usage.
+- **Historical Metrics:** Model Drift, Benchmark Trends, Approval Rates.
+
+#### Example Dashboard
+- Total Evaluations: **91**
+- Average Quality: **8.0**
+- Average Correctness: **7.8**
+- Accumulated Cost: **$0.0117**
+
+---
+
+### 8️⃣ Leaderboard
+Tracks performance across models.
+
+#### Ranking Metrics
+- Quality Score
+- Correctness Score
+- Relevance Score
+- Number of Evaluations
+
+#### Use Cases
+- Model selection
+- Regression testing
+- Vendor comparison
+- Cost-performance analysis
+
+---
+
+## 🔐 Security Features
+
+JudgeOps includes multiple defense layers.
+
+- Prompt Injection Detection
+- Jailbreak Detection
+- Privacy Guardrails
+- Hallucination Detection
+- Policy Compliance Validation
+- Audit Logging
+
+---
+
+## 📊 Evaluation Framework
+
+### Quality Dimensions
+
+| Metric | Description |
+|:---|:---|
+| **Relevance** | Alignment with prompt |
+| **Correctness** | Factual accuracy |
+| **Completeness** | Coverage of request |
+| **Clarity** | Readability and structure |
+| **Consistency** | Internal coherence |
+| **Adherence** | Instruction following |
+| **Safety** | Harmful content resistance |
+| **Resistance** | Attack resistance |
+
+---
+
+## ⚙️ Technology Stack
+
+- **Frontend:** React.js, TypeScript, Tailwind CSS, Recharts / Chart.js
+- **Backend:** Python, FastAPI, REST APIs, SQLAlchemy, Async Processing
+- **AI Stack:** OpenRouter, Google ADK, Ollama, GPT Models, Gemini Models, Claude Models, Llama Models, Qwen Models
+- **Retrieval & Verification:** RAG, Vector Search, Google Search Agents, Claim Verification, Groundedness Analysis
+
+---
+
+## 🚀 Future Improvements
+
+- ELO-based model ranking
+- Pairwise response comparison
+- Judge confidence estimation
+- Human-in-the-loop evaluation
+- Benchmark dataset exports
+- Real-time monitoring alerts
+- Multi-agent evaluation pipelines
+
+---
+
+## 📈 Real-World Applications
+
+- **Enterprises:** Customer Support Validation, AI Governance, Compliance Auditing
+- **AI Teams:** Model Evaluation, Regression Testing, Prompt Testing
+- **Research:** Benchmark Creation, LLM Comparison, Hallucination Studies
+- **Startups:** RAG Validation, Production Monitoring, Safety Evaluation
+
+---
+
+## 🎯 Key Learning Outcomes
+
+This project demonstrates practical experience in:
+- LLMOps & AI Evaluation Frameworks
+- LLM-as-a-Judge Systems & Agentic AI
+- Retrieval-Augmented Generation (RAG)
+- AI Governance & Prompt Security
+- Hallucination Detection & Model Benchmarking
+- Full-Stack AI System Design
+
+---
+
+## 👨💻 Author
+
+**Sai Ganesh**
+*AI Engineer | Machine Learning | LLMOps | Generative AI*
+
+---
+
+## ⭐ Project Vision
+
+JudgeOps was built with a simple goal:
+
+> *Move beyond AI generation and build systems that can evaluate, verify, benchmark, and govern AI responsibly.*
+
+If you found this project interesting, consider giving it a ⭐ on GitHub.
