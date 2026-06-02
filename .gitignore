@@ -1,0 +1,40 @@
+# Environments and API Keys
+.env
+apikey.txt
+venv/
+env/
+ENV/
+*.env
+
+# SQLite Databases
+*.db
+*.db-shm
+*.db-wal
+
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Python cache / test files
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+
+# IDE / System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.gemini/
+.antigravity/
